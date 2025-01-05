@@ -1,10 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Title</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мессенджер</title>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 
+<!-- Регистрация и логин -->
+<div id="auth">
+    <h2>Добро пожаловать</h2>
+
+    <!-- Форма логина -->
+    <form id="login-form">
+        <label for="username">
+            <input type="text" id="username" placeholder="Имя пользователя" required>
+        </label>
+        <label for="password">
+            <input type="password" id="password" placeholder="Пароль" required>
+        </label>
+        <button type="button" class="loginButton">Войти</button>
+        <hr>
+        <button type="button" class="signupButton">Регистрация</button>
+    </form>
+    <!-- Форма регистрации -->
+    <form id="signup-form" class="hidden">
+        <label for="signup-username">
+            <input type="text" id="signup-username" placeholder="Имя пользователя" required>
+        </label>
+        <label for="signup-email">
+            <input type="text" id="signup-email" placeholder="Электронная почта" required>
+        </label>
+        <label for="signup-password">
+            <input type="password" id="signup-password" placeholder="Пароль" required>
+        </label>
+        <button type="button" class="signupSubmitButton">Зарегистрироваться</button>
+    </form>
+</div>
+
+<!-- Основная страница -->
+
+<div id="page-content">
+    <h1>Мессенджер</h1>
+    <button class="logoutButton">Выйти</button>
+    <!-- Пользователи -->
+    <div class="userBox">
+        <h3>Пользователи</h3>
+        <ul class="userList"></ul>
+    </div>
+    <!-- Чаты -->
+    <div class="allChatsBox">
+        <h3>Чаты</h3>
+        <ul class="chatList"></ul>
+        <label>
+            <input class="roomName" type="text" placeholder="Введите название чата">
+        </label>
+        <button class="CreateChatBtn" type="button">Создать чат</button>
+    </div>
+    <!-- Сообщения -->
+    <div class="chatBox">
+        <h3 id="chat-name"></h3>
+        <h4 id="chat-description"></h4>
+
+        <form id="messageForm">
+            <label>
+                <input class="chatInput" type="text" placeholder="Напишите сообщение...">
+            </label>
+            <button class="sendButton" type="button">Отправить</button>
+        </form>
+    </div>
+</div>
+<script src="/static/js/script.js"></script>
+<script src="/static/js/auth.js"></script>
 </body>
 </html>

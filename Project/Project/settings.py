@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-_d9fms&=7a1x$s=@%vcg)yxs^p^%o940cvs+j-obulg12g!c%b
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']  #  WS connection №1.2
 
 # Application definition
 
@@ -38,13 +38,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'main',
     'authApp',
+
     'rest_framework',
     'rest_framework.authtoken',
+    'channels',                  # WS connection №1.1
+    'corsheaders',               # cors №1
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',   # cors №2
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -72,8 +77,17 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'Project.wsgi.application'
 
+# WS connection №5
+ASGI_APPLICATION = 'Project.asgi.application'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",  # Используем встроенную память
+    },
+}
+
+WSGI_APPLICATION = 'Project.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -126,3 +140,16 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# cors №3
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:63342",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+}

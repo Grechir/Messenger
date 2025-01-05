@@ -37,14 +37,14 @@ def login(request):
     user_identification = authenticate(username=data['username'], password=data['password'])
     # если пользователя нет, то возвращается объект None, в ином случае:
     if user_identification:
-        user = User.objects.get(username=data['username']) # достаем пользователя по информации из запроса
-        serializer = UserSerializer(user)  # сериализируем этого пользователя
+        # user = User.objects.get(username=data['username']) # достаем пользователя по информации из запроса
+        serializer = UserSerializer(user_identification)  # сериализируем этого пользователя
 
         response_data = {
             'user': serializer.data,
         }
 
-        token, created_token = Token.objects.get_or_create(user=user)
+        token, created_token = Token.objects.get_or_create(user=user_identification)
         # так как каждый раз, когда пользователь выходит из системы, токен, что использовался для аутентификации
         # пропадает, мы создаем новый и присваиваем переменной created_token, в ином случае в token
         if token:
@@ -54,7 +54,7 @@ def login(request):
 
         return Response(response_data, status=status.HTTP_200_OK)
 
-    return Response({"detail": "not found"}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"detail": "not found"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 @api_view(['GET'])
