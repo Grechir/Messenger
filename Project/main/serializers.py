@@ -10,9 +10,10 @@ class ChatSerializer(serializers.ModelSerializer):
 
 
 class MessageSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='sender.username', read_only=True)
     class Meta:
         model = Message
-        fields = ('id', 'chat', 'content', 'timestamp', 'sender')
+        fields = ('id', 'chat', 'content', 'timestamp', 'sender', 'username')
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

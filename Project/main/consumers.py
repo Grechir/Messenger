@@ -19,20 +19,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data=None, bytes_data=None):
         data = json.loads(text_data) # получаем данные в формате json и преобразуем в словарь (python объект)
         message = data['message'] # извлекаем сообщение по ключу message
+        username = data['username']
 
         await self.channel_layer.group_send( # Передаем сообщение (не отправляем) в очередь для отправки всем участникам группы
             self.room_group_name, # первый аргумент - название группы, куда отправляем сообщение
             {                               # второй аргумент - словарь, который содержит:
                 'type': 'chat_message',     # 1) Тип обработчика (который и отправит сообщение)
                 'message': message,         # 2) Само сообщение
+                'username': username        # 3) Имя отправителя
             }
         )
 
     # обработчик отправки сообщения всем участникам группы (извлекает сообщение из события event и отправляет)
     async def chat_message(self, event):
         message = event['message']  # event - словарь, переданный в group_send
+        username = event['username']
         await self.send(text_data=json.dumps({  # self.send отвечает за передачу сообщения от сервера в браузер
             'message': message,
+            'username': username
         }))
 
     # отключение пользователя от websocket соединения

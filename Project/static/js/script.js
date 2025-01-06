@@ -1,16 +1,20 @@
 // работа с чатом
 const chatBox = document.querySelector('.chatBox');
 const chatInput = document.querySelector('.chatInput');
+const roomNameInput = document.querySelector('.roomName');
 const sendButton = document.querySelector('.sendButton');
+const createChatBtn = document.querySelector('.CreateChatBtn');
 
 // Получение и отображение пользователей и чатов
 const userList = document.querySelector('.userList');
 const chatList = document.querySelector('.chatList');
+const messageList = document.querySelector('.messageList');
 const csrftoken = getCookie('csrftoken'); // токен пользователя
 
 let chatSocket = null;
 let currentChatId = null;
 let currentUserId = null;
+let currentUsername = null;
 
 //////////////////////////////////////////////// открытие соединения с чатом /////////////
 function openChat(chatId, chatName, chatDescription) {
@@ -32,13 +36,18 @@ function openChat(chatId, chatName, chatDescription) {
     // 3.1) при открытии соединения
     chatSocket.onopen = function () {
         console.log(`Connected to ${chatName}`);
+        messageList.innerHTML = '';
+        loadMessages(chatId);
     };
 
     // 4) при получении сообщения
     chatSocket.onmessage = function (event) {
         const data = JSON.parse(event.data);
-        chatBox.innerHTML += `<div>${data.username}: ${data.message}</div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const messageLi = document.createElement('li');
+        messageLi.textContent = `${data.username}: ${data.message}`;
+        messageList.prepend(messageLi);
+        messageList.scrollTop = chatBox.scrollHeight;
     };
 
     // 5) при закрытии соединения
@@ -72,12 +81,15 @@ async function sendMessageToDB(message, chatId, userId) {
     }
 }
 
-function sendMessageToWS(socket, message, userId) {
+function sendMessageToWS(socket, message, userId, username) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({
             message: message,
-            user: userId
+            user: userId,
+            username: username
         }));
+    } else {
+        console.error("WebSocket не открыт или не готов к отправке.");
     }
 }
 
@@ -89,22 +101,34 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Элементы с ID 'username' или 'chat-name' не найдены.");
     }
 });
-// отправка сообщения при нажатии на кнопку
-sendButton.addEventListener('click', (event) => {
-    event.preventDefault();
+// отправка сообщения
+async function sendMessage() {
 
     const message = chatInput.value;
     const chatId = currentChatId
     const userId = currentUserId
-    console.log("Сообщение:", message, " id чата:", chatId, " id пользователя:", userId);
+    const username = currentUsername
+    console.log(
+        " Сообщение:", message,
+        " id чата:", chatId,
+        " id пользователя:", userId,
+        " username пользователя:", username
+    );
 
-    if (!message || !chatId || !userId) {
+    if (message && chatId && userId) {
         sendMessageToDB(message, chatId, userId);
-        sendMessageToWS(chatSocket, message, userId);
+        sendMessageToWS(chatSocket, message, userId, username);
 
-        chatBox.scrollTop = chatBox.scrollHeight; // прокручиваем чат вниз
         chatInput.value = ''; // очищаем поле ввода
+
+    } else {
+        console.log('Не удалось отправить сообщение. Проверьте данные: ', { message, chatId, userId })
     }
+}
+
+sendButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    sendMessage();  // вызываем функцию отправки сообщения
 });
 
 // отправка сообщения при нажатии на Enter
@@ -129,6 +153,7 @@ async function fetchData() {
         if (currentUserResponse.ok) {
             const userData = await currentUserResponse.json();
             currentUserId = userData.id; // сохраняем id текущего пользователя
+            currentUsername = userData.username  // сохраняем username текущего пользователя
         } else {
             if (currentUserResponse.status === 403) {
                 console.error('Ошибка: Необходимо авторизоваться для доступа.');
@@ -209,6 +234,38 @@ if (localStorage.getItem('token')) {
 // (замечание) Если пользователей и чатов будет много, то сайт ляжет отдохнуть. Но сейчас речь идет не об оптимизации.
 // P.S. А когда о ней идет речь? XD
 
+////////////////////////////////////// загрузка и отображение сообщений чата /////////////////
+async function loadMessages(chatId) {
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/api/messages/?chat_id=${chatId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Token ${localStorage.getItem('token')}`,
+            },
+        });
+        if (!response.ok) {
+            console.error('Ошибка при загрузке сообщений:', await response.text());
+            return;
+        }
+        const data = await response.json();
+        renderMessages(data); // массив передаем в renderMessages
+
+    } catch (error) {
+        console.error('Ошибка при загрузке сообщений:', error);
+    }
+}
+
+function renderMessages(messages) {
+    messageList.innerHTML = '';
+    messages.forEach(message => {
+        const messageLi = document.createElement('li');
+        messageLi.textContent = `${message.username}: ${message.content}`;
+        messageList.appendChild(messageLi);
+    });
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+
 ////////////////////////// автоматическая передача csrf токена для поддержания сессий ////////
 function getCookie(name) {
     let cookieValue = null;
@@ -224,3 +281,58 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+/////////////////////////////////////////////// создание чата //////////////////////////////////
+async function createChat() {
+    const roomName = roomNameInput.value.trim();  // Получаем название чата
+    const participant = currentUserId
+    if (!roomName) {
+        alert('Введите название чата');
+        return;
+    }
+    try {
+        const response = await fetch('http://127.0.0.1:8000/api/chats/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${localStorage.getItem('token')}`,
+            },
+            body: JSON.stringify({
+                name: roomName,
+                participants: [participant]
+            }),
+        });
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Чат успешно создан:', data);
+            addChatToChatList(data);  // Добавляем новый чат в список
+            roomNameInput.value = '';  // Очищаем поле ввода
+        } else {
+            console.error('Ошибка при создании чата');
+            alert('Не удалось создать чат');
+        }
+    } catch (error) {
+        console.error('Ошибка соединения:', error);
+        alert('Ошибка соединения');
+    }
+}
+
+function addChatToChatList(chat) {
+    const chatLi = document.createElement('li');
+    chatLi.textContent = `${chat.name}\n${chat.description}`;
+    chatList.appendChild(chatLi);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    chatLi.setAttribute('data-chat-id', chat.id);  // сразу устанавливаем атрибут с id чата
+    chatLi.addEventListener('click', () => {
+        // открываем чат
+        openChat(chat.id, chat.name);
+    });
+}
+
+createChatBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    createChat();
+});
+
+
+
