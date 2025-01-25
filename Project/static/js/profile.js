@@ -28,7 +28,11 @@ document.getElementById('saveProfileBtn').addEventListener('click', async () => 
     data.append('last_name', document.getElementById('lastName').value);
     data.append('bio', document.getElementById('bio').value);
     data.append('birth_date', document.getElementById('birthDate').value);
-    data.append('avatar', document.getElementById('avatar').files[0])
+
+    const avatar = document.getElementById('avatar')
+    if (avatar.files.length > 0) {
+        data.append('avatar', avatar.files[0]);
+    }
 
     for (let [key, value] of data.entries()) {
         console.log(`${key}: ${value}`);
@@ -43,7 +47,8 @@ document.getElementById('saveProfileBtn').addEventListener('click', async () => 
             body: data,
     });
         if (response.ok) {
-            alert('Профиль обновлен')
+            alert('Профиль обновлен');
+            window.location.reload();
         } else {
             alert('Ошибка обновления профиля')
         }
