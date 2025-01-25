@@ -2,8 +2,13 @@
 const chatBox = document.querySelector('.chatBox');
 const chatInput = document.querySelector('.chatInput');
 const roomNameInput = document.querySelector('.roomName');
+const roomDescriptionInput = document.querySelector('.roomDescription');
 const sendButton = document.querySelector('.sendButton');
 const createChatBtn = document.querySelector('.CreateChatBtn');
+const editChatButton = document.querySelector('.editChatButton');
+const deleteChatButton = document.querySelector('.deleteChatButton');
+const closeModalButton = document.querySelector('.closeModalButton');
+const saveModalButton = document.querySelector('.saveModalButton');
 
 // Получение и отображение пользователей и чатов
 const userList = document.querySelector('.userList');
@@ -15,6 +20,7 @@ let chatSocket = null;
 let currentChatId = null;
 let currentUserId = null;
 let currentUsername = null;
+let currentUserAvatar = null;
 
 //////////////////////////////////////////////// открытие соединения с чатом /////////////
 function openChat(chatId, chatName, chatDescription) {
@@ -109,10 +115,10 @@ async function sendMessage() {
     const userId = currentUserId
     const username = currentUsername
     console.log(
-        " Сообщение:", message,
-        " id чата:", chatId,
-        " id пользователя:", userId,
-        " username пользователя:", username
+        `Сообщение: ${message},
+        id чата: ${chatId},
+        id пользователя: ${userId},
+        Имя пользователя: ${username},`
     );
 
     if (message && chatId && userId) {
@@ -152,8 +158,24 @@ async function fetchData() {
 
         if (currentUserResponse.ok) {
             const userData = await currentUserResponse.json();
+
+            // профиль
+            document.getElementById('user-name').textContent = `${userData.username}`
+
+            const profileLink = document.getElementById('profile-link');
+            profileLink.href = userData.profile_url
+
             currentUserId = userData.id; // сохраняем id текущего пользователя
             currentUsername = userData.username  // сохраняем username текущего пользователя
+            currentUserAvatar = userData.avatar // сохраняем аватарку текущего пользователя
+
+            if (currentUserAvatar) {
+                document.getElementById('user-avatar').src = currentUserAvatar
+            } else {
+                console.log('не удалось найти аватар в базе данных')
+                document.getElementById('user-avatar').src = 'media/avatar/default.jpg'
+            }
+
         } else {
             if (currentUserResponse.status === 403) {
                 console.error('Ошибка: Необходимо авторизоваться для доступа.');
@@ -220,7 +242,7 @@ function renderChats(chats) {
         li.setAttribute('data-chat-id', chat.id);  // сразу устанавливаем атрибут с id чата
         li.addEventListener('click', () => {
             // открываем чат
-            openChat(chat.id, chat.name);
+            openChat(chat.id, chat.name, chat.description);
         });
         chatList.appendChild(li); // создаем элемент списка li внутри списка ul
     })
@@ -285,6 +307,7 @@ function getCookie(name) {
 /////////////////////////////////////////////// создание чата //////////////////////////////////
 async function createChat() {
     const roomName = roomNameInput.value.trim();  // Получаем название чата
+    const roomDescription = roomDescriptionInput.value
     const participant = currentUserId
     if (!roomName) {
         alert('Введите название чата');
@@ -299,14 +322,16 @@ async function createChat() {
             },
             body: JSON.stringify({
                 name: roomName,
+                description: roomDescription,
                 participants: [participant]
             }),
         });
         if (response.ok) {
             const data = await response.json();
             console.log('Чат успешно создан:', data);
-            addChatToChatList(data);  // Добавляем новый чат в список
-            roomNameInput.value = '';  // Очищаем поле ввода
+            addChatToChatList(data);        // Добавляем новый чат в список
+            roomNameInput.value = '';           // Очищаем поле ввода
+            roomDescriptionInput.value = '';
         } else {
             console.error('Ошибка при создании чата');
             alert('Не удалось создать чат');
@@ -319,13 +344,13 @@ async function createChat() {
 
 function addChatToChatList(chat) {
     const chatLi = document.createElement('li');
-    chatLi.textContent = `${chat.name}\n${chat.description}`;
+    chatLi.textContent = `${chat.name}`;
     chatList.appendChild(chatLi);
     chatBox.scrollTop = chatBox.scrollHeight;
     chatLi.setAttribute('data-chat-id', chat.id);  // сразу устанавливаем атрибут с id чата
     chatLi.addEventListener('click', () => {
         // открываем чат
-        openChat(chat.id, chat.name);
+        openChat(chat.id, chat.name, chat.description);
     });
 }
 
@@ -334,5 +359,82 @@ createChatBtn.addEventListener('click', (event) => {
     createChat();
 });
 
+/////////////////////////////////// Редактирование и удаление чата //////////////////////
 
+// РЕДАКТИРОВАНИЕ ЧАТА
+// открытие окна редактирования
+editChatButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    document.getElementById('editChatModal').style.display = 'block';
 
+// Закрытие окна редактирования
+    closeModalButton.addEventListener('click', () => {
+        document.getElementById('editChatModal').style.display = 'none';
+    });
+
+// Сохранение изменений (отправка данных на сервер)
+    saveModalButton.addEventListener('click', async () => {
+        const name = document.getElementById('chatNameInput').value;
+        const description = document.getElementById('chatDescriptionInput').value;
+
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/chats/${currentChatId}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Token ${localStorage.getItem('token')}`,
+                },
+                body: JSON.stringify({
+                    name,
+                    description,
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Обновляем интерфейс после успешного сохранения
+                document.getElementById('chat-name').textContent = data.name;
+                document.getElementById('chat-description').textContent = data.description;
+
+                // Закрываем окно редактирования
+                document.getElementById('editChatModal').style.display = 'none';
+
+                alert('Чат успешно отредактирован!');
+                window.location.reload();
+            } else {
+                alert('Ошибка редактирования чата.');
+            }
+        } catch (error) {
+            console.error('Непредвиденная ошибка:', error);
+        }
+    });
+});
+
+// УДАЛЕНИЕ ЧАТА
+deleteChatButton.addEventListener('click', async (event) => {
+    event.preventDefault();
+
+    const confirmDelete = confirm(`Вы уверены, что хотите удалить этот чат?`);
+    if (!confirmDelete) return;
+
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/api/chats/${currentChatId}/`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${localStorage.getItem('token')}`,
+            }
+        })
+
+        if (response.ok) {
+            alert('Чат успешно удален!');
+            window.location.reload();
+        } else {
+            alert('Не удалось удалить чат');
+        }
+
+    } catch (error) {
+        console.log('Ошибка удаления чата:', error);
+    }
+});

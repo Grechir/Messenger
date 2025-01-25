@@ -1,15 +1,15 @@
-from django.core.serializers import serialize
+from six import print_
 
 from .models import Chat, Message
 from .serializers import ChatSerializer, MessageSerializer, UserSerializer
 
-from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 
 from django.contrib.auth.models import User
+from django.urls import reverse
 
 
 
@@ -40,19 +40,30 @@ class MessageViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=400)
 
 
-class UserViewSet(ReadOnlyModelViewSet):
+class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
-    @action(detail=False, methods=['get'], url_path='current_user')
+    @action(detail=False, methods=['get', 'put'], url_path='current_user')
     def current_user(self, request):
-        # if request.user.is_authenticated:
+        user = request.user  # Получаем текущего пользователя
 
-        user = request.user  # получаем пользователя
-        return Response({
-            'id': user.id,
-            'username': user.username,
-            'email': user.email
-        })
-        # else:
-        #     return Response({'detail': 'Необходимо авторизоваться'}, status=status.HTTP_403_FORBIDDEN)
+        if request.method == 'GET':
+            # Сериализуем данные пользователя
+            serializer = self.get_serializer(user)
+            data = serializer.data
+
+            # Формируем URL профиля
+            profile_url = request.build_absolute_uri(
+                reverse('profile', kwargs={'user_id': user.id})
+            )
+            data['profile_url'] = profile_url
+            return Response(data)
+
+        elif request.method == 'PUT':
+            print('Отправленная дата:', request.data)
+            # Обновляем данные пользователя
+            serializer = self.get_serializer(user, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)

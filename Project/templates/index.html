@@ -43,6 +43,18 @@
 
 <div id="page-content">
     <h1>Мессенджер</h1>
+
+    <div class="user-profile">
+
+        <div class="image-container">
+            <img id="user-avatar" src="" alt="Аватар" width="50">
+        </div>
+
+        <a id="profile-link" href="">
+            <span id="user-name"></span>
+        </a>
+    </div>
+
     <button class="logoutButton">Выйти</button>
     <!-- Пользователи -->
     <div class="userBox">
@@ -55,6 +67,7 @@
         <ul class="chatList"></ul>
         <label>
             <input class="roomName" type="text" placeholder="Введите название чата">
+            <input class="roomDescription" type="text" placeholder="Введите описание чата">
         </label>
         <button class="CreateChatBtn" type="button">Создать чат</button>
     </div>
@@ -63,6 +76,21 @@
 
         <h3 id="chat-name"></h3>
         <h4 id="chat-description"></h4>
+        <button class="editChatButton" type="button">Edit Chat</button>
+        <button class="deleteChatButton" type="button">Delete Chat</button>
+
+        <div id="editChatModal" style="display: none;">
+            <form id="editChatForm">
+                <h2>Edit Chat</h2>
+                <label>
+                    <input id="chatNameInput" type="text" placeholder="Введите название чата">
+                    <input id="chatDescriptionInput" type="text" placeholder="Введите описание чата">
+                </label>
+                <button type="button" class="saveModalButton">Save Changes</button>
+                <button type="button" class="closeModalButton">Cancel</button>
+            </form>
+        </div>
+
         <ul class="messageList"></ul>
 
         <form id="messageForm">

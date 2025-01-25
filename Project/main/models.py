@@ -12,7 +12,7 @@ class Chat(models.Model):
 
 class Message(models.Model):
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
-    content = models.TextField(max_length=4096)
+    content = models.CharField(max_length=4096)
     timestamp = models.DateTimeField(auto_now_add=True)
     sender = models.ForeignKey(User, on_delete=models.CASCADE)
 
@@ -20,3 +20,8 @@ class Message(models.Model):
         return f"{self.sender.name}: {self.content}"
 
 
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    avatar = models.ImageField(upload_to='avatars/', blank=True)
+    birth_date = models.DateField(blank=True)
+    bio = models.TextField(blank=True)

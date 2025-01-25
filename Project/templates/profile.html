@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Профиль пользователя</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="image-container">
+        <img id="profile-avatar" src="" alt="Аватар" width="50">
+    </div>
+    <h1>Редактировать профиль</h1>
+    <form id="profileForm" enctype="multipart/form-data">
+        <label>
+            Имя:
+            <input type="text" name="first_name" id="firstName">
+        </label><br>
+        <label>
+            Фамилия:
+            <input type="text" name="last_name" id="lastName">
+        </label><br>
+        <label>
+            Биография:
+            <textarea name="bio" id="bio"></textarea>
+        </label><br>
+        <label>
+            Дата рождения:
+            <input type="date" name="birth_date" id="birthDate">
+        </label><br>
+        <label>
+            Аватар:
+            <input type="file" name="avatar" id="avatar">
+        </label><br>
+        <button type="button" id="saveProfileBtn">Сохранить</button>
+    </form>
+<script src="{% static 'js/profile.js' %}"></script>
+</body>
+</html>

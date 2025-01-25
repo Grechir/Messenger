@@ -81,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (mainContent) mainContent.classList.add('hidden');
 
             alert('Вы вышли из системы.');
+            window.location.reload();
         });
     }
 
