@@ -1,5 +1,3 @@
-from six import print_
-
 from .models import Chat, Message
 from .serializers import ChatSerializer, MessageSerializer, UserSerializer
 
@@ -17,6 +15,19 @@ class ChatViewSet(viewsets.ModelViewSet):
     queryset = Chat.objects.all()
     serializer_class = ChatSerializer
 
+    @action(detail=True, methods=['PATCH'])
+    def add_participant(self, request, pk=None):
+        chat = self.get_object()
+        user_id = request.data.get("user_id")
+
+        if not user_id:
+            return Response({"error": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        chat.participants.add(user_id)  # Передаём ID
+        chat.save()
+
+        return Response({"message": f"Пользователь с id:{user_id} успешно добавлен в чат {chat.name}"})
+
 
 class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all()
@@ -30,7 +41,7 @@ class MessageViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         raise ValidationError({"error": "Параметр 'chat_id' обязателен для получения сообщений."})
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['POST'])
     def create_message(self, request):
         data = request.data                                     # создаем дату из запроса
         serializer = self.get_serializer(data=data)             # проверяем данные на валидность сериализатором
@@ -44,7 +55,7 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
-    @action(detail=False, methods=['get', 'put'], url_path='current_user')
+    @action(detail=False, methods=['GET', 'PUT'], url_path='current_user')
     def current_user(self, request):
         user = request.user  # Получаем текущего пользователя
 
@@ -61,7 +72,6 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(data)
 
         elif request.method == 'PUT':
-            print('Отправленная дата:', request.data)
             # Обновляем данные пользователя
             serializer = self.get_serializer(user, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)

@@ -5,6 +5,7 @@ class Chat(models.Model):
     name = models.CharField(max_length=64)
     description = models.CharField(max_length=512, blank=True)
     participants = models.ManyToManyField(User)
+    is_group = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name

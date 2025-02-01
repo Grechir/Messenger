@@ -9,13 +9,16 @@ const editChatButton = document.querySelector('.editChatButton');
 const deleteChatButton = document.querySelector('.deleteChatButton');
 const closeModalButton = document.querySelector('.closeModalButton');
 const saveModalButton = document.querySelector('.saveModalButton');
+const addParticipantButton = document.querySelector('.addParticipantButton');
 
 // Получение и отображение пользователей и чатов
 const userList = document.querySelector('.userList');
 const chatList = document.querySelector('.chatList');
 const messageList = document.querySelector('.messageList');
+const availableUsersList = document.querySelector('.availableUsersList');
 const csrftoken = getCookie('csrftoken'); // токен пользователя
 
+let allUsers = null;
 let chatSocket = null;
 let currentChatId = null;
 let currentUserId = null;
@@ -107,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Элементы с ID 'username' или 'chat-name' не найдены.");
     }
 });
+
 // отправка сообщения
 async function sendMessage() {
 
@@ -132,6 +136,7 @@ async function sendMessage() {
     }
 }
 
+// отправка сообщения
 sendButton.addEventListener('click', (event) => {
     event.preventDefault();
     sendMessage();  // вызываем функцию отправки сообщения
@@ -159,9 +164,6 @@ async function fetchData() {
         if (currentUserResponse.ok) {
             const userData = await currentUserResponse.json();
 
-            // профиль
-            document.getElementById('user-name').textContent = `${userData.username}`
-
             const profileLink = document.getElementById('profile-link');
             profileLink.href = userData.profile_url
 
@@ -169,6 +171,7 @@ async function fetchData() {
             currentUsername = userData.username  // сохраняем username текущего пользователя
             currentUserAvatar = userData.avatar // сохраняем аватарку текущего пользователя
 
+            document.getElementById('user-name').textContent = `${userData.username}`
             if (currentUserAvatar) {
                 document.getElementById('user-avatar').src = currentUserAvatar
             } else {
@@ -189,30 +192,33 @@ async function fetchData() {
             headers: {
                 'X-CSRFToken': csrftoken,
             },
-            credentials: 'same-origin', // Чтобы передавать куки
         });
 
-        // преобразуем в JSON
-        const users = await userResponse.json(); // перевод в JSON
+        // преобразуем в JSON и отображаем пользователей
+        if (userResponse.ok) {
+            const users = await userResponse.json(); // перевод в JSON
+            allUsers = users;
+            renderUsers(users);
+        } else {
+            console.error('Ошибка получения пользователей!')
+        }
 
-        // отображение пользователей
-        renderUsers(users);
-
-        // запрос чатов через API ////////////////////////
+        // запрос чатов текущего пользователя через API ////////////////////////
         const chatsResponse = await fetch ('http://127.0.0.1:8000/api/chats/', {
             method: 'GET',
             headers: {
                 'X-CSRFToken': csrftoken,
             },
-            credentials: 'same-origin', // Чтобы передавать куки
-        }); // это в Project.urls.py
+        });
 
-        // преобразуем в JSON
-        const chats = await chatsResponse.json();
-
-        // отображение чатов
-        renderChats(chats);
-
+        // преобразуем в JSON и отображаем чаты
+        if (chatsResponse.ok) {
+            const chats = await chatsResponse.json();
+            const userChats = chats.filter(chat => chat.participants.includes(currentUserId));
+            renderChats(userChats);
+        } else {
+            console.error('Ошибка получения чатов!')
+        }
 
     } catch (error) {
         console.error('Ошибка загрузки данных', error);
@@ -436,5 +442,58 @@ deleteChatButton.addEventListener('click', async (event) => {
 
     } catch (error) {
         console.log('Ошибка удаления чата:', error);
+    }
+});
+
+//////////////// добавление участников чата ///////////////////////////////////////
+function addParticipant(chatId, userId) {
+    fetch(`http://127.0.0.1:8000/api/chats/${chatId}/add_participant/`, {
+        method: "PATCH",
+        headers: {
+            "Authorization": `Token ${localStorage.getItem('token')}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ user_id: userId })
+    })
+        .then(response => response.json())
+        .then(data => {
+            console.log("Участник добавлен:", data);
+            document.querySelector(".availableUsersList").style.display = "none"; // Закрываем список
+            alert('Добавлен новый участник!')
+        })
+        .catch(error => console.error("Ошибка:", error));
+}
+
+function loadAvailableUsers(chatId, chatParticipants) {
+    const availableUsers = allUsers.filter(user => !chatParticipants.includes(user.id));
+
+    availableUsersList.innerHTML = '';
+
+    availableUsers.forEach(user => {
+        const userItem = document.createElement('li');
+        userItem.textContent = user.username;
+        userItem.onclick = () => addParticipant(chatId, user.id);
+        availableUsersList.appendChild(userItem);
+    });
+
+    availableUsersList.style.display = 'block';
+}
+
+addParticipantButton.addEventListener('click', (event) => {
+    event.preventDefault();
+
+    fetch(`http://127.0.0.1:8000/api/chats/${currentChatId}/`)
+        .then(response => response.json())
+        .then(chat => {
+            const chatParticipants = chat.participants
+            loadAvailableUsers(currentChatId, chatParticipants);
+        })
+        .catch(error => console.log('Ошибка при получении данных чата', error));
+})
+
+// Скрываем список, если кликнули за его пределами
+document.addEventListener('click', (event) => {
+    if (!availableUsersList.contains(event.target) && event.target.id !== "addParticipantButton") {
+        availableUsersList.style.display = 'none';
     }
 });
