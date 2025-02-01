@@ -1,3 +1,8 @@
+from logging import exception
+from xmlrpc.client import Fault
+
+from django.db.models.functions import Replace
+
 from .models import Chat, Message
 from .serializers import ChatSerializer, MessageSerializer, UserSerializer
 
@@ -27,6 +32,35 @@ class ChatViewSet(viewsets.ModelViewSet):
         chat.save()
 
         return Response({"message": f"Пользователь с id:{user_id} успешно добавлен в чат {chat.name}"})
+
+    @action(detail=False, methods=['POST'])
+    def get_or_create_private_chat(self, request):
+        user1 = request.user  # тот, кто делает запрос (текущий пользователь)
+        user2_id = request.data.get('user_id') # тот, кого мы хотим найти (берем его ID)
+
+        if not user2_id:
+            return Response({'error': 'Не указан ID пользователя'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user2 = User.objects.get(id=user2_id)
+        except exception:
+            return Response({'error': 'Пользователь не найден'}, status=status.HTTP_404_NOT_FOUND)
+
+        chat = Chat.objects.filter(
+            is_group=False,
+            participants=user1
+        ).filter(participants=user2).first()
+
+        # если чат создан, возвращаем его
+        if chat:
+            return Response(ChatSerializer(chat).data)
+
+        # если чата нет, то создаем новый
+        chat = Chat.objects.create(name=f'Чат {user1.username} и {user2.username}', is_group=False)
+        chat.participants.add(user1, user2)
+        chat.save()
+
+        return Response(ChatSerializer(chat).data, status=status.HTTP_201_CREATED)
 
 
 class MessageViewSet(viewsets.ModelViewSet):

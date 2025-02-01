@@ -26,7 +26,7 @@ let currentUsername = null;
 let currentUserAvatar = null;
 
 //////////////////////////////////////////////// открытие соединения с чатом /////////////
-function openChat(chatId, chatName, chatDescription) {
+function openChat(chatId, chatName, chatDescription=null) {
     // 1) если уже открыто соединение, то закрываем его
     if (chatSocket) {
         chatSocket.close(); // Закрываем старое соединение
@@ -63,6 +63,31 @@ function openChat(chatId, chatName, chatDescription) {
     chatSocket.onclose = function () {
         console.log(`Disconnected from ${chatName}`);
     };
+}
+
+//////////////////////////////////////////////////Открытие соединения с ЛС ////////////////
+async function openPrivateChat(userId) {
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/api/chats/get_or_create_private_chat/`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Token ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({user_id: userId}),
+        });
+
+        if (response.ok) {
+            const chat = await response.json()
+            console.log("Чат найден или создан:", chat);
+            openChat(chat.id, chat.name);
+        } else {
+            console.log('Чат не найден')
+        }
+
+    } catch (error) {
+        console.log('Ошибка открытия чата с пользователем', error);
+    }
 }
 
 ///////////////////////////////////////////////// Отправка сообщения ///////////
@@ -233,7 +258,7 @@ function renderUsers(users) {
         li.textContent = `${user.username}`;
         li.addEventListener('click', () => {
             // открываем личный чат с пользователем
-            openChat(user.id, li.textContent);
+            openPrivateChat(user.id);
         });
         userList.appendChild(li); // создаем элемент списка li внутри списка ul
     });
