@@ -1,8 +1,4 @@
 from logging import exception
-from xmlrpc.client import Fault
-
-from django.db.models.functions import Replace
-
 from .models import Chat, Message
 from .serializers import ChatSerializer, MessageSerializer, UserSerializer
 
