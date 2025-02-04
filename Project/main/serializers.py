@@ -23,9 +23,9 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    avatar = serializers.ImageField(source='profile.avatar')
-    birth_date = serializers.DateField(source='profile.birth_date')
-    bio = serializers.CharField(source='profile.bio')
+    avatar = serializers.ImageField(source='profile.avatar', required=False)
+    birth_date = serializers.DateField(source='profile.birth_date', required=False)
+    bio = serializers.CharField(source='profile.bio', required=False)
 
     class Meta:
         model = User
@@ -44,11 +44,12 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
 
         # обновляем данные профиля модели Profile (profile_data)
-        if profile_data:
+        if profile_data is not None:
             profile_instance = instance.profile # работаем с инстансом модели Profile, переданным с OneToOneField
             for attr, value in profile_data.items():
-                print(f"Updating profile {attr}: {value}")
-                setattr(profile_instance, attr, value)
+                if value is not None:
+                    print(f"Updating profile {attr}: {value}")
+                    setattr(profile_instance, attr, value)
             profile_instance.save()
 
         return instance
